@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+
+# Django
+*.log
+
+# Node (React)
+node_modules/
+
+# Env
+venv/
+env/
+cv_matching/
+
+# OS
+.DS_Store 
