@@ -7,77 +7,95 @@ import WordCloud     from "../components/WordCloud";
 import MatchScoreCard from "../components/MatchScoreCard";
 import ClusterMap    from "../components/ClusterMap";
 import ScoreRing     from "../components/ScoreRing";
+import GeoMap        from "../components/GeoMap";
 import "./Dashboard.css";
 
-// ── Données démo (remplacer par appels API) ────────────────────
-const DEMO = {
-  offers: [
-    { id:1, title:"Data Scientist",  company:"OCP Group",     location:"Casablanca", contract:"CDI",   score:92, color1:"#00e5a0", color2:"#3d7fff", icon:"🏭", skills:["Python","scikit-learn","NLP","SQL","Pandas"] },
-    { id:2, title:"ML Engineer",     company:"Attijariwafa",  location:"Rabat",      contract:"CDI",   score:87, color1:"#3d7fff", color2:"#a855f7", icon:"🏦", skills:["TensorFlow","Python","Docker","MLOps"] },
-    { id:3, title:"Data Analyst",    company:"Maroc Telecom", location:"Rabat",      contract:"CDD",   score:74, color1:"#f59e0b", color2:"#ef4444", icon:"📡", skills:["Power BI","SQL","Excel","Python"] },
-    { id:4, title:"NLP Engineer",    company:"UM6P",          location:"Ben Guerir", contract:"Stage", score:68, color1:"#10b981", color2:"#06b6d4", icon:"🎓", skills:["spaCy","BERT","Python","HuggingFace"] },
-    { id:5, title:"BI Developer",    company:"BMCE Bank",     location:"Casablanca", contract:"CDI",   score:61, color1:"#ec4899", color2:"#8b5cf6", icon:"💹", skills:["Tableau","SQL","Python","ETL"] },
-  ],
-  radar: [
-    { subject:"Python", user:90, offer:95 }, { subject:"ML",     user:80, offer:85 },
-    { subject:"NLP",    user:85, offer:90 }, { subject:"SQL",    user:70, offer:80 },
-    { subject:"DevOps", user:40, offer:75 }, { subject:"Viz",    user:65, offer:70 },
-  ],
-  words: [
-    { text:"Python",          size:36, color:"#00e5a0", opacity:1    },
-    { text:"SQL",             size:28, color:"#3d7fff", opacity:0.9  },
-    { text:"Machine Learning",size:24, color:"#a855f7", opacity:0.85 },
-    { text:"NLP",             size:30, color:"#00e5a0", opacity:0.95 },
-    { text:"Docker",          size:20, color:"#f59e0b", opacity:0.8  },
-    { text:"TensorFlow",      size:22, color:"#ef4444", opacity:0.85 },
-    { text:"scikit-learn",    size:26, color:"#3d7fff", opacity:0.9  },
-    { text:"Pandas",          size:22, color:"#10b981", opacity:0.8  },
-    { text:"spaCy",           size:20, color:"#06b6d4", opacity:0.8  },
-    { text:"MLOps",           size:20, color:"#a855f7", opacity:0.8  },
-  ],
-  dist: [
-    { range:"0–20", count:2 }, { range:"20–40", count:5 },
-    { range:"40–60",count:12}, { range:"60–80", count:18}, { range:"80–100",count:8 },
-  ],
-  clusters: [
-    { label:"Data Science & ML",  color:"#00e5a0", count:18 },
-    { label:"BI & Analytics",     color:"#3d7fff", count:12 },
-    { label:"NLP & AI",           color:"#a855f7", count:9  },
-    { label:"Data Engineering",   color:"#f59e0b", count:14 },
-    { label:"Développement",      color:"#ef4444", count:7  },
-  ],
-};
-
-const USER_SKILLS = ["Python","NLP","scikit-learn","Pandas","SQL","spaCy","Machine Learning"];
+const CLUSTER_COLORS = ["#00e5a0", "#3d7fff", "#a855f7", "#f59e0b", "#ef4444", "#06b6d4"];
 
 export default function Dashboard() {
-  const [offers,   setOffers]   = useState(DEMO.offers);
-  const [selected, setSelected] = useState(DEMO.offers[0]);
-  const [radar,    setRadar]    = useState(DEMO.radar);
-  const [words,    setWords]    = useState(DEMO.words);
-  const [dist,     setDist]     = useState(DEMO.dist);
-  const [clusters, setClusters] = useState(DEMO.clusters);
+  const [offers, setOffers] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [mapPoints, setMapPoints] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // TODO : brancher API Django
-  // useEffect(() => {
-  //   matchingAPI.results().then(r    => setOffers(r.data));
-  //   matchingAPI.wordcloud().then(r  => setWords(r.data));
-  //   matchingAPI.distribute().then(r => setDist(r.data));
-  //   matchingAPI.clusters().then(r   => setClusters(r.data));
-  // }, []);
-  // useEffect(() => {
-  //   if (selected) matchingAPI.detail(selected.id).then(r => setRadar(r.data.radar));
-  // }, [selected]);
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem("matching_results") || "[]");
+    const normalized = stored.map((o, i) => ({
+      id: o.job_id ?? i + 1,
+      title: o.job || "Offre",
+      company: o.company || "N/A",
+      location: o.location || "N/A",
+      contract: o.contract_type || "N/A",
+      score: Math.round(o.final_score || 0),
+      color1: "#00e5a0",
+      color2: "#3d7fff",
+      icon: "💼",
+      cluster_id: o.cluster_id ?? 0,
+      cosine_score: o.cosine_score || 0,
+      jaccard_score: o.jaccard_score || 0,
+      experience_score: o.experience_score || 0,
+      geo_score: o.geo_score || 0,
+      final_score: o.final_score || 0,
+      lat: o.lat,
+      lng: o.lng,
+    }));
+    setOffers(normalized);
+    setSelected(normalized[0] || null);
+
+    matchingAPI
+      .mapOffers()
+      .then((response) => setMapPoints(response.data.points || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const radar = selected
+    ? [
+        { subject: "Cosinus", user: selected.cosine_score, offer: 100 },
+        { subject: "Jaccard", user: selected.jaccard_score, offer: 100 },
+        { subject: "Experience", user: selected.experience_score, offer: 100 },
+        { subject: "Geo", user: selected.geo_score, offer: 100 },
+        { subject: "Final", user: selected.final_score, offer: 100 },
+      ]
+    : [];
+
+  const words = offers
+    .slice(0, 8)
+    .map((o, i) => ({ text: o.title, size: 16 + Math.round(o.score / 8), color: CLUSTER_COLORS[i % CLUSTER_COLORS.length], opacity: 0.9 }));
+
+  const dist = [
+    { range: "0-20", count: offers.filter((o) => o.score < 20).length },
+    { range: "20-40", count: offers.filter((o) => o.score >= 20 && o.score < 40).length },
+    { range: "40-60", count: offers.filter((o) => o.score >= 40 && o.score < 60).length },
+    { range: "60-80", count: offers.filter((o) => o.score >= 60 && o.score < 80).length },
+    { range: "80-100", count: offers.filter((o) => o.score >= 80).length },
+  ];
+
+  const clusterMap = {};
+  offers.forEach((o) => {
+    const k = `Cluster ${o.cluster_id ?? 0}`;
+    clusterMap[k] = (clusterMap[k] || 0) + 1;
+  });
+  const clusters = Object.entries(clusterMap).map(([label, count], i) => ({
+    label,
+    count,
+    color: CLUSTER_COLORS[i % CLUSTER_COLORS.length],
+  }));
 
   const STATS = [
-    { label:"Offres collectées",    value:"807", sub:"5 plateformes",     icon:"📋", color:"var(--accent)" },
-    { label:"Score moyen",          value:"74%", sub:"Top match : 92%",   icon:"🎯", color:"#3d7fff"       },
-    { label:"Compétences matchées", value:"5/7", sub:"Python, NLP, SQL…", icon:"✅", color:"#a855f7"       },
-    { label:"Clusters identifiés",  value:"5",   sub:"K-Means optimal",   icon:"🗂️", color:"#f59e0b"       },
+    { label:"Offres matchees",      value:`${offers.length}`, sub:"Issues du dernier upload CV", icon:"📋", color:"var(--accent)" },
+    { label:"Score moyen",          value:`${offers.length ? Math.round(offers.reduce((a,b)=>a+b.score,0)/offers.length) : 0}%`, sub:`Top match : ${offers[0]?.score ?? 0}%`, icon:"🎯", color:"#3d7fff" },
+    { label:"Points geo",           value:`${mapPoints.length}`, sub:"Offres geolocalisees", icon:"📍", color:"#a855f7" },
+    { label:"Clusters identifies",  value:`${clusters.length}`, sub:"K-Means backend", icon:"🗂️", color:"#f59e0b" },
   ];
 
   return (
     <div className="content">
+      {loading && <div className="card" style={{ marginBottom: 12 }}>Chargement des donnees...</div>}
+      {!offers.length && !loading && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          Aucun matching disponible. Uploadez d'abord un CV dans la page Results.
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid-4 fade-in">
@@ -116,17 +134,16 @@ export default function Dashboard() {
             </div>
             <ScoreRing value={selected?.score ?? 0} />
             <div style={{ marginTop:18 }}>
-              <div className="section-label">Compétences requises</div>
+              <div className="section-label">Sous-scores</div>
               <div className="chips">
-                {selected?.skills?.map((s) => (
-                  <span key={s} className={`chip ${USER_SKILLS.includes(s) ? "match" : "miss"}`}>
-                    {USER_SKILLS.includes(s) ? "✓ " : ""}{s}
-                  </span>
-                ))}
+                <span className="chip match">Cosine {Math.round(selected?.cosine_score || 0)}%</span>
+                <span className="chip">Jaccard {Math.round(selected?.jaccard_score || 0)}%</span>
+                <span className="chip">Exp {Math.round(selected?.experience_score || 0)}%</span>
+                <span className="chip">Geo {Math.round(selected?.geo_score || 0)}%</span>
               </div>
             </div>
-            <button className="btn btn-primary" style={{ width:"100%", marginTop:16, fontSize:13 }}>
-              Voir l'offre complète →
+            <button className="btn btn-primary" style={{ width:"100%", marginTop:16, fontSize:13 }} onClick={() => window.location.href="/results"}>
+              Aller aux resultats →
             </button>
           </div>
 
@@ -166,9 +183,17 @@ export default function Dashboard() {
       <div className="card fade-in fade-in-d4">
         <div className="card-header">
           <span className="card-title">Clustering K-Means des offres</span>
-          <span className="card-badge">k = 5 optimal</span>
+          <span className="card-badge">{clusters.length} clusters</span>
         </div>
         <ClusterMap clusters={clusters} />
+      </div>
+
+      <div className="card fade-in fade-in-d4" style={{ marginTop: 16 }}>
+        <div className="card-header">
+          <span className="card-title">Carte geographique</span>
+          <span className="card-badge">{mapPoints.length} points</span>
+        </div>
+        <GeoMap offers={mapPoints} />
       </div>
     </div>
   );

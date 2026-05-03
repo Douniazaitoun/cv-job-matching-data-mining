@@ -1,5 +1,5 @@
 // frontend/src/pages/Profile.jsx
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { profileAPI } from "../services/api";
 import "./Profile.css";
 
@@ -19,15 +19,44 @@ export default function Profile({ user }) {
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const fileRef = useRef();
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    profileAPI.get(userId).then((res) => {
+      const p = res.data.profile;
+      setForm((prev) => ({
+        ...prev,
+        name: p.name || prev.name,
+        email: p.email || prev.email,
+        location: p.city || prev.location,
+        experience: String(p.experience_years ?? prev.experience),
+        formation: p.education || prev.formation,
+      }));
+      const skillsFromApi = (p.skills_manual || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (skillsFromApi.length) setSkills(skillsFromApi);
+    }).catch(() => {});
+  }, [userId]);
 
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // await profileAPI.update(form);
-      // if (cvFile) await profileAPI.uploadCV(cvFile);
-      await new Promise((r) => setTimeout(r, 800));
+      if (userId) {
+        await profileAPI.update(userId, {
+          name: form.name,
+          email: form.email,
+          city: form.location,
+          experience_years: Number(form.experience) || 0,
+          skills_manual: skills.join(", "),
+          education: form.formation,
+        });
+      }
+      if (cvFile) await profileAPI.uploadCV(cvFile);
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } finally { setSaving(false); }
   };
