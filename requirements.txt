@@ -1,0 +1,13 @@
+django
+djangorestframework
+django-cors-headers
+numpy
+pandas
+scikit-learn
+spacy
+pdfplumber
+python-docx
+beautifulsoup4
+selenium
+requests
+lxml
