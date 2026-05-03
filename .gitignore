@@ -9,11 +9,17 @@ db.sqlite3
 
 # Node (React)
 node_modules/
+**/node_modules/
+frontend/build/
 
 # Env
 venv/
 env/
 cv_matching/
+
+# Workspace cleanup
+backend/
+media/cvs/sample_cv_*.pdf
 
 # OS
 .DS_Store 

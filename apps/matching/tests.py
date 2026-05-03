@@ -3,6 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from unittest.mock import patch
 
 from apps.matching.matching_engine import compute_matching
+from apps.matching.geoutils import geocode_city
 from apps.matching.scoring import (
     compute_experience_match,
     compute_geo_match,
@@ -66,6 +67,8 @@ class MatchingEngineTests(TestCase):
         self.assertEqual(len(results), 3)
         self.assertGreaterEqual(results[0]["final_score"], results[-1]["final_score"])
         self.assertIn("cluster_id", results[0])
+        self.assertIn("lat", results[0])
+        self.assertIn("lng", results[0])
 
 
 class MatchingApiTests(TestCase):
@@ -99,3 +102,17 @@ class MatchingApiTests(TestCase):
         self.assertIn("clustering", body)
         self.assertIn("results", body)
         self.assertGreaterEqual(body["total_results"], 1)
+
+    def test_map_offers_api_returns_geo_points(self):
+        response = self.client.get("/api/map-offers/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("points", payload)
+        self.assertGreaterEqual(payload["total"], 1)
+        self.assertIn("lat", payload["points"][0])
+        self.assertIn("lng", payload["points"][0])
+
+    def test_geocode_city_known_value(self):
+        lat, lng = geocode_city("Casablanca")
+        self.assertIsNotNone(lat)
+        self.assertIsNotNone(lng)

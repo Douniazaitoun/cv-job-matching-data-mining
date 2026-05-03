@@ -1,10 +1,12 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from apps.matching.geoutils import geocode_city
 from apps.matching.matching_engine import compute_matching
 from apps.nlp_engine.cv_reader import read_cv_file
 from apps.nlp_engine.cleaner import clean_cv_text
 from apps.auth_users.models import UploadedCV, UserProfile
+from apps.scraping.models import JobOffer
 
 @csrf_exempt
 def match_uploaded_cv_view(request):
@@ -46,3 +48,27 @@ def match_uploaded_cv_view(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+def map_offers_view(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Use GET method"}, status=405)
+
+    offers = JobOffer.objects.all()
+    points = []
+    for offer in offers:
+        lat, lng = geocode_city(offer.location or "")
+        if lat is None or lng is None:
+            continue
+        points.append(
+            {
+                "job_id": offer.id,
+                "title": offer.title,
+                "company": offer.company,
+                "location": offer.location,
+                "lat": lat,
+                "lng": lng,
+            }
+        )
+
+    return JsonResponse({"total": len(points), "points": points})

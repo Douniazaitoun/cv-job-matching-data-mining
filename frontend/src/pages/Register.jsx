@@ -26,12 +26,14 @@ export default function Register({ onLogin }) {
       const res = await authAPI.register({
         name: form.name, email: form.email, password: form.password,
       });
-      localStorage.setItem("access_token",  res.data.access);
-      localStorage.setItem("refresh_token", res.data.refresh);
       onLogin(res.data.user);
       navigate("/profile");   // → compléter le profil après inscription
     } catch (err) {
-      setError(err.response?.data?.detail || "Erreur lors de l'inscription.");
+      setError(
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Erreur lors de l'inscription."
+      );
     } finally { setLoading(false); }
   };
 

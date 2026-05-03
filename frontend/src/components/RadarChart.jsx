@@ -1,26 +1,24 @@
-// frontend/src/components/MatchScoreCard.jsx
-import "./MatchScoreCard.css";
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart as ReRadarChart,
+  ResponsiveContainer,
+} from "recharts";
 
-const scoreColor = (s) => s >= 80 ? "#00e5a0" : s >= 60 ? "#f59e0b" : "#ff6b6b";
+export default function RadarChart({ data = [] }) {
+  if (!data.length) return <div style={{ fontSize: 12, color: "var(--muted)" }}>Pas de donnees radar.</div>;
 
-export default function MatchScoreCard({ offer, selected, onClick }) {
   return (
-    <div className={`offer-item${selected ? " selected" : ""}`} onClick={onClick}>
-      <div className="offer-logo"
-        style={{ background:`linear-gradient(135deg, ${offer.color1}, ${offer.color2})` }}>
-        {offer.icon}
-      </div>
-      <div className="offer-info">
-        <div className="offer-title">{offer.title}</div>
-        <div className="offer-meta">
-          <span>{offer.company}</span>
-          <span>📍 {offer.location}</span>
-          <span>{offer.contract}</span>
-        </div>
-      </div>
-      <div className="offer-score" style={{ color: scoreColor(offer.score) }}>
-        {offer.score}%
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={230}>
+      <ReRadarChart data={data}>
+        <PolarGrid stroke="#293042" />
+        <PolarAngleAxis dataKey="subject" tick={{ fill: "#9ca3af", fontSize: 11 }} />
+        <PolarRadiusAxis tick={false} axisLine={false} />
+        <Radar name="Profil" dataKey="user" stroke="#00e5a0" fill="#00e5a0" fillOpacity={0.25} />
+        <Radar name="Offre" dataKey="offer" stroke="#3d7fff" fill="#3d7fff" fillOpacity={0.12} />
+      </ReRadarChart>
+    </ResponsiveContainer>
   );
 }
