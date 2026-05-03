@@ -4,6 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from apps.matching.clustering import build_job_clusters
+from apps.matching.geoutils import geocode_city
 from apps.matching.jaccard import compute_jaccard_similarity
 from apps.matching.scoring import (
     compute_experience_match,
@@ -46,6 +47,7 @@ def compute_matching(
             job_exp_text=job.experience_required or "",
         )
         geo_score = compute_geo_match(user_city=user_city, job_location=job.location or "")
+        lat, lng = geocode_city(job.location or "")
 
         final_score = compute_weighted_score(
             cosine_score=cosine_score,
@@ -60,6 +62,8 @@ def compute_matching(
                 "job": job.title,
                 "company": job.company,
                 "location": job.location,
+                "lat": lat,
+                "lng": lng,
                 "cluster_id": int(cluster_labels[i]),
                 "cosine_score": float(round(cosine_score * 100, 2)),
                 "jaccard_score": float(round(jaccard_score * 100, 2)),
