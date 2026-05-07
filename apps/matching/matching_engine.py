@@ -44,8 +44,7 @@ def compute_matching(
         jaccard_score = compute_jaccard_similarity(user_text, job_text)
         exp_score = compute_experience_match(
             user_exp_years=float(user_experience_years or 0.0),
-            job_exp_text=job.experience_required or "",
-        )
+           job_exp_text=job.experience or "",         )
         geo_score = compute_geo_match(user_city=user_city, job_location=job.location or "")
         lat, lng = geocode_city(job.location or "")
 
@@ -57,21 +56,22 @@ def compute_matching(
         )
 
         results.append(
-            {
-                "job_id": job.id,
-                "job": job.title,
-                "company": job.company,
-                "location": job.location,
-                "lat": lat,
-                "lng": lng,
-                "cluster_id": int(cluster_labels[i]),
-                "cosine_score": float(round(cosine_score * 100, 2)),
-                "jaccard_score": float(round(jaccard_score * 100, 2)),
-                "experience_score": float(round(exp_score * 100, 2)),
-                "geo_score": float(round(geo_score * 100, 2)),
-                "final_score": float(round(final_score * 100, 2)),
-            }
-        )
+    {
+        "job_id": job.id,
+        "job": job.title,
+        "company": job.company,
+        "location": job.location,
+        "contract": job.contract,  # ← AJOUTE CETTE LIGNE
+        "lat": lat,
+        "lng": lng,
+        "cluster_id": int(cluster_labels[i]),
+        "cosine_score": float(round(cosine_score * 100, 2)),
+        "jaccard_score": float(round(jaccard_score * 100, 2)),
+        "experience_score": float(round(exp_score * 100, 2)),
+        "geo_score": float(round(geo_score * 100, 2)),
+        "final_score": float(round(final_score * 100, 2)),
+    }
+)
 
     results.sort(key=lambda x: x["final_score"], reverse=True)
     return {"results": results, "clustering": {"optimal_k": optimal_k}}

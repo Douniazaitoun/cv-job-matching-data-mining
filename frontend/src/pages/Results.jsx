@@ -17,8 +17,7 @@ export default function Results() {
   const [error, setError] = useState("");
 
   const filtered = useMemo(
-    () => (filter === "Tous" ? offers : offers.filter((o) => o.contract_type === filter)),
-    [filter, offers]
+() => (filter === "Tous" ? offers : offers.filter((o) => o.contract?.includes(filter))),    [filter, offers]
   );
 
   const radarData = useMemo(() => {
